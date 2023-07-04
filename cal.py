@@ -1,39 +1,44 @@
 from cmath import sqrt
-import scipy
+import traceback
+#import scipy
+#import cyipopt
 from scipy.optimize import minimize
+def nzero(a):
+    return 0.01 if (a==0) else a
 class ring:
     rList=[]
-    def __init__(self,S,m,p):
+    def __init__(self,S,m,p,init_r1,init_r2,init_g,scalar):
         # x=(R1,R2,g,omega)
-        self.sa=lambda x,*args:S*(x[p]+x[1+p])/x[p+1]+2*3.14*(x[1+p]*x[1+p]-x[p]*x[p])
-        
+        self.sa=lambda x:S*(x[p]+x[1+p])/nzero(x[p+1])+4*3.14*(x[1+p]*x[1+p]-x[p]*x[p])
+        #self.sa=wraper(S,m,p)
         # limit
-        self.lim1=lambda x:-sqrt(x[2+p]/x[1+p])+0.03
-        self.con1={"type":"ineq","fun":self.lim1}
 
-        self.lim4=lambda x:x[1+p]-1000*x[2+p]/9
+        self.lim4=lambda x:-x[1+p]+S/314
         self.con4={"type":"ineq","fun":self.lim4}
 
         self.lim6=lambda x:x[1+p]-x[p]-70
         self.con6={"type":"ineq","fun":self.lim6}
 
-        self.lim7=lambda x:x[p+3]-sqrt(x[p+2]/x[p+1])
+        self.lim7=lambda x:x[p+3]**2-(x[p+2]/nzero(x[p+1]))
         self.con7={"type":"eq","fun":self.lim7}
 
-        self.cons=(self.con1,self.con4,self.con6,self.con7)
-        self.bounds=((544,S/314),(544,S/314),(4.9,7.84),(-0.03,0.03))
-        self.args=(630,700,5,0.02)# the value should not be on the edge 
+        self.cons=(self.con4,self.con6,self.con7)
+        self.bounds=((0,S/314),(0,S/314),(4.9,7.84),(None,None))
+
+        self.args=(init_r1,init_r2,init_g,scalar*sqrt(init_g/init_r2))# the value should not be on the edge 
         self.m=m
         self.p=p
         self.S=S
         self.rList.append(self)
         self.id=len(self.rList)
+
 def s(rings):
     # return lambda x:rings[0].sa(x)+rings[1].sa(x)+rings[2].sa(x)+rings[3].sa(x)
     def func(x):
         a=0
         for i in range(0,4):
           a+=rings[i].sa(x)
+        #print(a)
         return a
     return func
 def eq(rs):
@@ -44,6 +49,8 @@ def eq(rs):
             r2=x[rs[i].p+1]
             omega=x[rs[i].p+3]
             a+=rs[i].m/2*(r2*r2+r1*r1)*omega
+            #print("R1:",r1)
+            #print("R2:",r2)
         print("L:",a)
         return a
     return eq1
@@ -90,15 +97,17 @@ def gInterval(rs):
                     r1=current_r1 if(r1<current_r1) else r1
                     r2=current_r2 if(r2>current_r2) else r2
                     length+=r2-r1
+            #length-=current_r2-current_r1
         #print(length)
-        return length/2
+        return nzero(length/2)
     return interval
+
 con_eq+=({"type":"eq","fun":gInterval(ring.rList)},)
-residential = ring(1369240,100,0)
-tra_in=ring(1620240,900,4)
-arg=ring(235206,100,8)
-ent=ring(235206,100,12)
-solution = minimize(s(ring.rList),gArgs(ring.rList),bounds=gBound(ring.rList),constraints=gCons(ring.rList)+con_eq)
+residential = ring(1369240,100,0,200,300,6,1)
+tra_in=ring(1620240,100,4,300,400,6,-1)
+arg=ring(235206,100,8,400,500,6,1)
+ent=ring(235206,26.7,12,500,600,6,-1)
+solution = minimize(s(ring.rList),gArgs(ring.rList),bounds=gBound(ring.rList),constraints=gCons(ring.rList)+con_eq,options={'maxiter': 200})
 print(solution)
 print(solution.jac)
 print(solution.x)
