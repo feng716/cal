@@ -1,4 +1,5 @@
 from cmath import sqrt
+import cmath
 import traceback
 #import scipy
 #import cyipopt
@@ -13,19 +14,16 @@ class ring:
         #self.sa=wraper(S,m,p)
         # limit
 
-        self.lim4=lambda x:-x[1+p]+S/314
-        self.con4={"type":"ineq","fun":self.lim4}
-
         self.lim6=lambda x:x[1+p]-x[p]-70
         self.con6={"type":"ineq","fun":self.lim6}
 
         self.lim7=lambda x:x[p+3]**2-(x[p+2]/nzero(x[p+1]))
         self.con7={"type":"eq","fun":self.lim7}
 
-        self.cons=(self.con4,self.con6,self.con7)
-        self.bounds=((0,S/314),(0,S/314),(4.9,7.84),(None,None))
+        self.cons=(self.con6,self.con7)
+        self.bounds=((50,S/314),(50,S/314),(4.9,7.84),(None,None))
 
-        self.args=(init_r1,init_r2,init_g,scalar*sqrt(init_g/init_r2))# the value should not be on the edge 
+        self.args=(init_r1,init_r2,init_g,scalar*sqrt(init_g/init_r2).real)# the value should not be on the edge 
         self.m=m
         self.p=p
         self.S=S
@@ -51,7 +49,7 @@ def eq(rs):
             a+=rs[i].m/2*(r2*r2+r1*r1)*omega
             #print("R1:",r1)
             #print("R2:",r2)
-        print("L:",a)
+        #print("L:",a)
         return a
     return eq1
 
@@ -103,11 +101,12 @@ def gInterval(rs):
     return interval
 
 con_eq+=({"type":"eq","fun":gInterval(ring.rList)},)
-residential = ring(1369240,100,0,200,300,6,1)
+residential=ring(1369240,100,0,200,300,6,1)
 tra_in=ring(1620240,100,4,300,400,6,-1)
 arg=ring(235206,100,8,400,500,6,1)
 ent=ring(235206,26.7,12,500,600,6,-1)
-solution = minimize(s(ring.rList),gArgs(ring.rList),bounds=gBound(ring.rList),constraints=gCons(ring.rList)+con_eq,options={'maxiter': 200})
+solution = minimize(s(ring.rList),gArgs(ring.rList),bounds=gBound(ring.rList),constraints=gCons(ring.rList)+con_eq,options={'maxiter': 1000},tol=1e-02)
+
 print(solution)
 print(solution.jac)
 print(solution.x)
